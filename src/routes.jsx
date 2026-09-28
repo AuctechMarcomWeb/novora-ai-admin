@@ -8,6 +8,8 @@ const SchoolList = lazy(() => import('./views/pages/Admin/Schools/SchoolList'))
 const BookList = lazy(() => import('./views/pages/Admin/Books/BookList'))
 const ResourceList = lazy(() => import('./views/pages/Admin/Resources/ResourceList'))
 const ActivityLogs = lazy(() => import('./views/pages/Admin/ActivityLogs/ActivityLogs'))
+const ClassList = lazy(() => import('./views/pages/Admin/Masters/Class/ClassList'))
+const SubjectList = lazy(() => import('./views/pages/Admin/Masters/Subject/SubjectList'))
 
 const routes = [
   { path: '/admin/dashboard', name: 'Admin Dashboard', element: AdminDashboard, roles: ADMIN_ONLY },
@@ -15,6 +17,8 @@ const routes = [
   { path: '/admin/books', name: 'Books / PDFs', element: BookList, roles: ADMIN_ONLY },
   { path: '/admin/resources', name: 'Resources', element: ResourceList, roles: ADMIN_ONLY },
   { path: '/admin/activity-logs', name: 'Activity Logs', element: ActivityLogs, roles: ADMIN_ONLY },
+  { path: '/admin/masters/classes', name: 'Class Master', element: ClassList, roles: ADMIN_ONLY },
+  { path: '/admin/masters/subjects', name: 'Subject Master', element: SubjectList, roles: ADMIN_ONLY },
 ]
 
 export { ALL_ROLES, ADMIN_ONLY }

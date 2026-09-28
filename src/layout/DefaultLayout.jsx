@@ -11,7 +11,7 @@ const DefaultLayout = () => {
   const { user, setUser } = useContext(AppContext)
 
   useEffect(() => {
-    const token = Cookies.get('MLM')
+    const token = Cookies.get('NovoraAiChat')
     if (!token) {
       navigate('/login')
       return
@@ -26,7 +26,7 @@ const DefaultLayout = () => {
         setUser(res.data.data.user)
       })
       .catch(() => {
-        Cookies.remove('MLM')
+        Cookies.remove('NovoraAiChat')
         setUser(null)
         navigate('/login')
       })

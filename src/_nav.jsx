@@ -6,6 +6,8 @@ import {
   BookOutlined,
   FolderOpenOutlined,
   HistoryOutlined,
+  SettingOutlined,
+  ReadOutlined,
 } from '@ant-design/icons'
 
 const iconStyle = { fontSize: '16px' }
@@ -42,6 +44,25 @@ export const adminNav = [
     name: 'Activity Logs',
     to: '/admin/activity-logs',
     icon: <HistoryOutlined style={iconStyle} className={iconClass} />,
+  },
+  {
+    component: CNavGroup,
+    name: 'Masters',
+    icon: <SettingOutlined style={iconStyle} className={iconClass} />,
+    items: [
+      {
+        component: CNavItem,
+        name: 'Class Master',
+        to: '/admin/masters/classes',
+        icon: <ReadOutlined style={iconStyle} className={iconClass} />,
+      },
+      {
+        component: CNavItem,
+        name: 'Subject Master',
+        to: '/admin/masters/subjects',
+        icon: <BookOutlined style={iconStyle} className={iconClass} />,
+      },
+    ],
   },
 ]
 
