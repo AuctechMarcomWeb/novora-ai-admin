@@ -1,99 +1,273 @@
-import React, { useState, useEffect } from 'react'
-import {
-  CCard,
-  CCardBody,
-  CCardHeader,
-  CCol,
-  CRow,
-  CTable,
-  CTableBody,
-  CTableDataCell,
-  CTableHead,
-  CTableHeaderCell,
-  CTableRow,
-  CButton,
-  CSpinner,
-  CBadge,
-} from '@coreui/react'
-import CIcon from '@coreui/icons-react'
-import { cilPencil, cilTrash, cilPlus } from '@coreui/icons'
+/* eslint-disable prettier/prettier */
+import { useState, useEffect } from 'react'
+import { Card, Row, Col, Button, Form, Typography, message } from 'antd'
+import { ExportOutlined } from '@ant-design/icons'
+
+import { booksService } from '../../../../services/books.service'
+import { getRequest } from '../../../../Helpers'
+import BookFilters from './components/BookFilters'
+import BookTable from './components/BookTable'
+import BookFormModal from './components/BookFormModal'
+
+const { Title } = Typography
 
 const BookList = () => {
-  const [books, setBooks] = useState([])
-  const [loading, setLoading] = useState(true)
+  const [books, setBooks]               = useState([])
+  const [allClasses, setAllClasses]     = useState([])
+  const [allSubjects, setAllSubjects]   = useState([])
+  const [loading, setLoading]           = useState(false)
+  const [showDeleted, setShowDeleted]   = useState(false)
+  const [searchText, setSearchText]     = useState('')
+  const [classFilter, setClassFilter]   = useState('')
+  const [subjectFilter, setSubjectFilter] = useState('')
+  const [statusFilter, setStatusFilter] = useState('')
+  const [pagination, setPagination]     = useState({ current: 1, pageSize: 10, total: 0 })
 
+  const [modalOpen, setModalOpen]       = useState(false)
+  const [modalMode, setModalMode]       = useState('create')   // create | edit | view
+  const [selectedBook, setSelectedBook] = useState(null)
+  const [form]                          = Form.useForm()
+
+  // ── Load dropdowns once ────────────────────────────────────────────────────
   useEffect(() => {
-    // TODO: Fetch books from API
-    // For now, using mock data
-    setBooks([])
-    setLoading(false)
+    getRequest('classes?isPagination=false&activeStatus=true')
+      .then((r) => setAllClasses(r.data.data.classes))
+      .catch(() => {})
+    getRequest('subjects?isPagination=false&activeStatus=true')
+      .then((r) => setAllSubjects(r.data.data.subjects))
+      .catch(() => {})
   }, [])
 
-  if (loading) {
-    return (
-      <div className="text-center mt-5">
-        <CSpinner color="primary" />
-      </div>
-    )
+  // ── Fetch books ────────────────────────────────────────────────────────────
+  useEffect(() => { fetchBooks() }, [
+    pagination.current, pagination.pageSize,
+    searchText, classFilter, subjectFilter, statusFilter, showDeleted,
+  ])
+
+  const fetchBooks = async () => {
+    setLoading(true)
+    try {
+      const q = new URLSearchParams({
+        page:  pagination.current,
+        limit: pagination.pageSize,
+        ...(searchText    && { search:       searchText }),
+        ...(classFilter   && { classRef:     classFilter }),
+        ...(subjectFilter && { subjectRef:   subjectFilter }),
+        ...(statusFilter  && { activeStatus: statusFilter }),
+      }).toString()
+
+      const endpoint = showDeleted ? `books/deleted?${q}` : `books?${q}`
+      const res = await getRequest(endpoint)
+      setBooks(res.data.data.books)
+      setPagination((p) => ({ ...p, total: res.data.data.total }))
+    } catch (err) {
+      message.error(err?.response?.data?.message || 'Failed to fetch books')
+    } finally {
+      setLoading(false)
+    }
   }
 
+  // ── Search / filters ───────────────────────────────────────────────────────
+  const handleSearch = (v) => {
+    setSearchText(v)
+    setPagination((p) => ({ ...p, current: 1 }))
+  }
+
+  // ── Modal helpers ──────────────────────────────────────────────────────────
+  const openCreate = () => {
+    setModalMode('create')
+    setSelectedBook(null)
+    form.resetFields()
+    setModalOpen(true)
+  }
+
+  const openEdit = (record) => {
+    setModalMode('edit')
+    setSelectedBook(record)
+    form.setFieldsValue({
+      title:      record.title,
+      summary:    record.summary,
+      coverImage: record.coverImage,
+      classRef:   record.classRef?._id,
+      subjectRef: record.subjectRef?._id,
+      pdfUrl:     record.pdfUrl,
+      pdfKey:     record.pdfKey,
+      chapters:   record.chapters || [],
+    })
+    setModalOpen(true)
+  }
+
+  const openView = (record) => {
+    setModalMode('view')
+    setSelectedBook(record)
+    form.setFieldsValue({
+      title:      record.title,
+      summary:    record.summary,
+      coverImage: record.coverImage,
+      classRef:   record.classRef?._id,
+      subjectRef: record.subjectRef?._id,
+      pdfUrl:     record.pdfUrl,
+      pdfKey:     record.pdfKey,
+      chapters:   record.chapters || [],
+    })
+    setModalOpen(true)
+  }
+
+  const closeModal = () => {
+    setModalOpen(false)
+    form.resetFields()
+    setSelectedBook(null)
+  }
+
+  const handleFormOk = async () => {
+    try {
+      const values = await form.validateFields()
+      setLoading(true)
+
+      const payload = {
+        title:      values.title,
+        summary:    values.summary    || '',
+        coverImage: values.coverImage || '',
+        classRef:   values.classRef,
+        subjectRef: values.subjectRef,
+        pdfUrl:     values.pdfUrl     || '',
+        pdfKey:     values.pdfKey     || '',
+        chapters:   values.chapters   || [],
+      }
+
+      if (modalMode === 'create') {
+        if (!payload.pdfUrl) {
+          message.error('Please upload a PDF first')
+          setLoading(false)
+          return
+        }
+        await booksService.createBook(payload)
+        message.success('Book created successfully')
+      } else {
+        await booksService.updateBook(selectedBook._id, payload)
+        message.success('Book updated successfully')
+      }
+
+      closeModal()
+      fetchBooks()
+    } catch (err) {
+      if (!err.errorFields) {
+        message.error(err?.response?.data?.message || 'Operation failed')
+      }
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  // ── CRUD operations ────────────────────────────────────────────────────────
+  const handleDelete = async (id) => {
+    try {
+      await booksService.deleteBook(id)
+      message.success('Book deleted')
+      fetchBooks()
+    } catch (err) {
+      message.error(err?.response?.data?.message || 'Failed to delete')
+    }
+  }
+
+  const handleRestore = async (id) => {
+    try {
+      await booksService.restoreBook(id)
+      message.success('Book restored')
+      fetchBooks()
+    } catch (err) {
+      message.error(err?.response?.data?.message || 'Failed to restore')
+    }
+  }
+
+  const handlePermanentDelete = async (id) => {
+    try {
+      await booksService.permanentDeleteBook(id)
+      message.success('Book permanently deleted')
+      fetchBooks()
+    } catch (err) {
+      message.error(err?.response?.data?.message || 'Failed to permanently delete')
+    }
+  }
+
+  const handleToggleStatus = async (id) => {
+    try {
+      await booksService.toggleStatus(id)
+      message.success('Status updated')
+      fetchBooks()
+    } catch (err) {
+      message.error(err?.response?.data?.message || 'Failed to update status')
+    }
+  }
+
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
-    <CRow>
-      <CCol xs={12}>
-        <CCard className="mb-4">
-          <CCardHeader className="d-flex justify-content-between align-items-center">
-            <strong>Books / PDFs</strong>
-            <CButton color="primary" size="sm">
-              <CIcon icon={cilPlus} className="me-2" />
-              Add Book
-            </CButton>
-          </CCardHeader>
-          <CCardBody>
-            {books.length === 0 ? (
-              <div className="text-center py-4">
-                <p className="text-muted">No books found</p>
-              </div>
-            ) : (
-              <CTable hover responsive>
-                <CTableHead>
-                  <CTableRow>
-                    <CTableHeaderCell scope="col">#</CTableHeaderCell>
-                    <CTableHeaderCell scope="col">Title</CTableHeaderCell>
-                    <CTableHeaderCell scope="col">Author</CTableHeaderCell>
-                    <CTableHeaderCell scope="col">Category</CTableHeaderCell>
-                    <CTableHeaderCell scope="col">Status</CTableHeaderCell>
-                    <CTableHeaderCell scope="col">Actions</CTableHeaderCell>
-                  </CTableRow>
-                </CTableHead>
-                <CTableBody>
-                  {books.map((book, index) => (
-                    <CTableRow key={book.id}>
-                      <CTableHeaderCell scope="row">{index + 1}</CTableHeaderCell>
-                      <CTableDataCell>{book.title}</CTableDataCell>
-                      <CTableDataCell>{book.author}</CTableDataCell>
-                      <CTableDataCell>{book.category}</CTableDataCell>
-                      <CTableDataCell>
-                        <CBadge color={book.isActive ? 'success' : 'danger'}>
-                          {book.isActive ? 'Active' : 'Inactive'}
-                        </CBadge>
-                      </CTableDataCell>
-                      <CTableDataCell>
-                        <CButton color="info" size="sm" className="me-2">
-                          <CIcon icon={cilPencil} />
-                        </CButton>
-                        <CButton color="danger" size="sm">
-                          <CIcon icon={cilTrash} />
-                        </CButton>
-                      </CTableDataCell>
-                    </CTableRow>
-                  ))}
-                </CTableBody>
-              </CTable>
-            )}
-          </CCardBody>
-        </CCard>
-      </CCol>
-    </CRow>
+    <div style={{ padding: '4px 0' }}>
+
+      {/* Page Header */}
+      <Row justify="space-between" align="middle" style={{ marginBottom: 16 }}>
+        <Col>
+          <Title level={4} style={{ margin: 0, color: '#111827' }}>📚 Books / PDFs</Title>
+          <div style={{ fontSize: 14, color: '#6B7280', marginTop: 2 }}>
+            Manage all books and PDF resources
+          </div>
+        </Col>
+        <Col>
+          <Button icon={<ExportOutlined />}>Export</Button>
+        </Col>
+      </Row>
+
+      {/* Filters */}
+      <BookFilters
+        showDeleted={showDeleted}
+        classes={allClasses}
+        subjects={allSubjects}
+        onSearch={handleSearch}
+        onRefresh={fetchBooks}
+        onClassFilter={(v) => { setClassFilter(v); setPagination((p) => ({ ...p, current: 1 })) }}
+        onSubjectFilter={(v) => { setSubjectFilter(v); setPagination((p) => ({ ...p, current: 1 })) }}
+        onStatusFilter={(v) => { setStatusFilter(v); setPagination((p) => ({ ...p, current: 1 })) }}
+        onToggleDeleted={() => {
+          setShowDeleted((p) => !p)
+          setPagination((p) => ({ ...p, current: 1 }))
+        }}
+        onAdd={openCreate}
+      />
+
+      {/* Table */}
+      <Card
+        style={{ borderRadius: 12, boxShadow: '0 1px 4px rgba(0,0,0,0.08)' }}
+        bodyStyle={{ padding: 0 }}
+      >
+        <BookTable
+          books={books}
+          loading={loading}
+          pagination={pagination}
+          showDeleted={showDeleted}
+          onTableChange={(pag) =>
+            setPagination((p) => ({ ...p, current: pag.current, pageSize: pag.pageSize }))
+          }
+          onView={openView}
+          onEdit={openEdit}
+          onDelete={handleDelete}
+          onRestore={handleRestore}
+          onPermanentDelete={handlePermanentDelete}
+          onToggleStatus={handleToggleStatus}
+        />
+      </Card>
+
+      {/* Form Modal */}
+      <BookFormModal
+        open={modalOpen}
+        mode={modalMode}
+        loading={loading}
+        form={form}
+        classes={allClasses}
+        subjects={allSubjects}
+        onOk={handleFormOk}
+        onCancel={closeModal}
+      />
+    </div>
   )
 }
 

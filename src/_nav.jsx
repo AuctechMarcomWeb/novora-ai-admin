@@ -21,31 +21,7 @@ export const adminNav = [
     to: '/admin/dashboard',
     icon: <DashboardOutlined style={iconStyle} className={iconClass} />,
   },
-  {
-    component: CNavItem,
-    name: 'Schools',
-    to: '/admin/schools',
-    icon: <BankOutlined style={iconStyle} className={iconClass} />,
-  },
-  {
-    component: CNavItem,
-    name: 'Books / PDFs',
-    to: '/admin/books',
-    icon: <BookOutlined style={iconStyle} className={iconClass} />,
-  },
-  {
-    component: CNavItem,
-    name: 'Resources',
-    to: '/admin/resources',
-    icon: <FolderOpenOutlined style={iconStyle} className={iconClass} />,
-  },
-  {
-    component: CNavItem,
-    name: 'Activity Logs',
-    to: '/admin/activity-logs',
-    icon: <HistoryOutlined style={iconStyle} className={iconClass} />,
-  },
-  {
+    {
     component: CNavGroup,
     name: 'Masters',
     icon: <SettingOutlined style={iconStyle} className={iconClass} />,
@@ -64,6 +40,26 @@ export const adminNav = [
       },
     ],
   },
+  {
+    component: CNavItem,
+    name: 'Schools',
+    to: '/admin/schools',
+    icon: <BankOutlined style={iconStyle} className={iconClass} />,
+  },
+  {
+    component: CNavItem,
+    name: 'Books / PDFs',
+    to: '/admin/books',
+    icon: <BookOutlined style={iconStyle} className={iconClass} />,
+  },
+ 
+  {
+    component: CNavItem,
+    name: 'Activity Logs',
+    to: '/admin/activity-logs',
+    icon: <HistoryOutlined style={iconStyle} className={iconClass} />,
+  },
+
 ]
 
 // ─── Role-based nav selector ──────────────────────────────────────────────────
