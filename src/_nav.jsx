@@ -8,6 +8,7 @@ import {
   HistoryOutlined,
   SettingOutlined,
   ReadOutlined,
+  AuditOutlined,
 } from '@ant-design/icons'
 
 const iconStyle = { fontSize: '16px' }
@@ -52,12 +53,12 @@ export const adminNav = [
     to: '/admin/books',
     icon: <BookOutlined style={iconStyle} className={iconClass} />,
   },
- 
+
   {
     component: CNavItem,
     name: 'Activity Logs',
-    to: '/admin/activity-logs',
-    icon: <HistoryOutlined style={iconStyle} className={iconClass} />,
+    to: '/admin/school-logs',
+    icon: <AuditOutlined style={iconStyle} className={iconClass} />,
   },
 
 ]
@@ -70,3 +71,5 @@ const navByRole = {
 const useNav = (role) => navByRole[role] || []
 
 export default useNav
+
+

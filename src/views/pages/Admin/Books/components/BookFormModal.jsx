@@ -98,9 +98,29 @@ const BookFormModal = ({ open, mode, loading, form, classes, subjects, onOk, onC
   const isEdit   = mode === 'edit'
 
   // Track class+subject selection
-  const [classSelected, setClassSelected]   = useState(false)
-  const [subjectSelected, setSubjectSelected] = useState(false)
+  const [classSelected, setClassSelected]       = useState(false)
+  const [subjectSelected, setSubjectSelected]   = useState(false)
+  const [filteredSubjects, setFilteredSubjects] = useState([])
   const classSubjectReady = classSelected && subjectSelected
+
+  // Filter subjects by classId
+  const filterSubjectsByClass = (classId, subjectList) =>
+    subjectList.filter((s) => (s.classRef?._id || s.classRef) === classId)
+
+  // Class change handler
+  const handleClassChange = (val) => {
+    form.setFieldValue('classRef', val)
+    form.setFieldValue('subjectRef', undefined)  // clear subject when class changes
+    setClassSelected(true)
+    setSubjectSelected(false)
+    setFilteredSubjects(filterSubjectsByClass(val, subjects))
+  }
+
+  // Subject change handler
+  const handleSubjectChange = (val) => {
+    form.setFieldValue('subjectRef', val)
+    setSubjectSelected(true)
+  }
 
   // Upload state
   const [uploadState, setUploadState]       = useState('idle')   // idle|uploading|done|error
@@ -167,9 +187,19 @@ const BookFormModal = ({ open, mode, loading, form, classes, subjects, onOk, onC
   const handleCancel = () => {
     setClassSelected(false)
     setSubjectSelected(false)
+    setFilteredSubjects([])
     resetUpload()
     onCancel()
   }
+
+  // In edit/view mode, if form already has classRef/subjectRef, mark them as selected
+  const currentClass   = form.getFieldValue('classRef')
+  const currentSubject = form.getFieldValue('subjectRef')
+  if ((isEdit || isView) && currentClass && !classSelected) {
+    setClassSelected(true)
+    setFilteredSubjects(filterSubjectsByClass(currentClass, subjects))
+  }
+  if ((isEdit || isView) && currentSubject && !subjectSelected) setSubjectSelected(true)
 
   return (
     <Modal
@@ -222,27 +252,28 @@ const BookFormModal = ({ open, mode, loading, form, classes, subjects, onOk, onC
                 <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: '#374151' }}>
                   Class <span style={{ color: 'red' }}>*</span>
                 </div>
-                <Form.Item name="classRef" noStyle rules={[{ required: true, message: 'Required' }]}>
-                  <Select
-                    placeholder="Select class" showSearch style={{ width: '100%' }}
-                    filterOption={(inp, opt) => opt.label.toLowerCase().includes(inp.toLowerCase())}
-                    options={classes.map((c) => ({ label: c.className, value: c._id }))}
-                    onChange={() => setClassSelected(true)}
-                  />
-                </Form.Item>
+                <Select
+                  placeholder="Select class" showSearch style={{ width: '100%' }}
+                  value={form.getFieldValue('classRef') || undefined}
+                  filterOption={(inp, opt) => opt.label.toLowerCase().includes(inp.toLowerCase())}
+                  options={classes.map((c) => ({ label: c.className, value: c._id }))}
+                  onChange={handleClassChange}
+                />
               </Col>
               <Col span={12}>
                 <div style={{ fontSize: 12, fontWeight: 600, marginBottom: 4, color: '#374151' }}>
                   Subject <span style={{ color: 'red' }}>*</span>
                 </div>
-                <Form.Item name="subjectRef" noStyle rules={[{ required: true, message: 'Required' }]}>
-                  <Select
-                    placeholder="Select subject" showSearch style={{ width: '100%' }}
-                    filterOption={(inp, opt) => opt.label.toLowerCase().includes(inp.toLowerCase())}
-                    options={subjects.map((s) => ({ label: s.subjectName, value: s._id }))}
-                    onChange={() => setSubjectSelected(true)}
-                  />
-                </Form.Item>
+                <Select
+                  placeholder={classSelected ? 'Select subject' : 'Select class first'}
+                  showSearch
+                  style={{ width: '100%' }}
+                  value={form.getFieldValue('subjectRef') || undefined}
+                  disabled={!classSelected}
+                  filterOption={(inp, opt) => opt.label.toLowerCase().includes(inp.toLowerCase())}
+                  options={filteredSubjects.map((s) => ({ label: s.subjectName, value: s._id }))}
+                  onChange={handleSubjectChange}
+                />
               </Col>
             </Row>
           )}
@@ -362,11 +393,39 @@ const BookFormModal = ({ open, mode, loading, form, classes, subjects, onOk, onC
       <div style={{ padding: '20px 24px' }}>
         <Form form={form} layout="vertical">
 
-          {/* Hidden */}
-          <Form.Item name="pdfUrl" hidden><Input /></Form.Item>
-          <Form.Item name="pdfKey" hidden><Input /></Form.Item>
+          {/* Always-present hidden/form fields — classRef & subjectRef MUST be inside Form */}
+          <Form.Item name="pdfUrl"    hidden><Input /></Form.Item>
+          <Form.Item name="pdfKey"    hidden><Input /></Form.Item>
+          <Form.Item
+            name="classRef"
+            hidden={!isView}
+            rules={[{ required: true, message: 'Please select a class' }]}
+            style={isView ? undefined : { display: 'none', margin: 0 }}
+          >
+            <Select
+              disabled={isView}
+              showSearch
+              filterOption={(inp, opt) => opt.label.toLowerCase().includes(inp.toLowerCase())}
+              options={classes.map((c) => ({ label: c.className, value: c._id }))}
+              onChange={() => setClassSelected(true)}
+            />
+          </Form.Item>
+          <Form.Item
+            name="subjectRef"
+            hidden={!isView}
+            rules={[{ required: true, message: 'Please select a subject' }]}
+            style={isView ? undefined : { display: 'none', margin: 0 }}
+          >
+            <Select
+              disabled={isView}
+              showSearch
+              filterOption={(inp, opt) => opt.label.toLowerCase().includes(inp.toLowerCase())}
+              options={(isView ? subjects : filteredSubjects).map((s) => ({ label: s.subjectName, value: s._id }))}
+              onChange={handleSubjectChange}
+            />
+          </Form.Item>
 
-          {/* Class + Subject shown in view mode only (read-only) */}
+          {/* View mode: show Class + Subject as readable fields */}
           {isView && (
             <Row gutter={16}>
               <Col span={12}>
