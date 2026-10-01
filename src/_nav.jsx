@@ -9,6 +9,7 @@ import {
   SettingOutlined,
   ReadOutlined,
   AuditOutlined,
+  VideoCameraOutlined,
 } from '@ant-design/icons'
 
 const iconStyle = { fontSize: '16px' }
@@ -52,6 +53,12 @@ export const adminNav = [
     name: 'Books / PDFs',
     to: '/admin/books',
     icon: <BookOutlined style={iconStyle} className={iconClass} />,
+  },
+  {
+    component: CNavItem,
+    name: 'Chapters / Videos',
+    to: '/admin/videos',
+    icon: <VideoCameraOutlined style={iconStyle} className={iconClass} />,
   },
 
   {

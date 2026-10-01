@@ -13,8 +13,9 @@ const { Title } = Typography
 
 const BookList = () => {
   const [books, setBooks]               = useState([])
-  const [allClasses, setAllClasses]     = useState([])
-  const [allSubjects, setAllSubjects]   = useState([])
+  const [allClasses, setAllClasses]         = useState([])
+  const [allSubjects, setAllSubjects]       = useState([])
+  const [filteredSubjects, setFilteredSubjects] = useState([]) // subjects filtered by classFilter
   const [loading, setLoading]           = useState(false)
   const [showDeleted, setShowDeleted]   = useState(false)
   const [searchText, setSearchText]     = useState('')
@@ -34,7 +35,10 @@ const BookList = () => {
       .then((r) => setAllClasses(r.data.data.classes))
       .catch(() => {})
     getRequest('subjects?isPagination=false&activeStatus=true')
-      .then((r) => setAllSubjects(r.data.data.subjects))
+      .then((r) => {
+        setAllSubjects(r.data.data.subjects)
+        setFilteredSubjects(r.data.data.subjects) // initially show all
+      })
       .catch(() => {})
   }, [])
 
@@ -221,10 +225,22 @@ const BookList = () => {
       <BookFilters
         showDeleted={showDeleted}
         classes={allClasses}
-        subjects={allSubjects}
+        subjects={filteredSubjects}
         onSearch={handleSearch}
         onRefresh={fetchBooks}
-        onClassFilter={(v) => { setClassFilter(v); setPagination((p) => ({ ...p, current: 1 })) }}
+        onClassFilter={(v) => {
+          setClassFilter(v)
+          setSubjectFilter('')   // reset subject when class changes
+          // Filter subjects by selected class, or show all if cleared
+          if (v) {
+            setFilteredSubjects(
+              allSubjects.filter((s) => (s.classRef?._id || s.classRef) === v)
+            )
+          } else {
+            setFilteredSubjects(allSubjects)
+          }
+          setPagination((p) => ({ ...p, current: 1 }))
+        }}
         onSubjectFilter={(v) => { setSubjectFilter(v); setPagination((p) => ({ ...p, current: 1 })) }}
         onStatusFilter={(v) => { setStatusFilter(v); setPagination((p) => ({ ...p, current: 1 })) }}
         onToggleDeleted={() => {
