@@ -1,8 +1,8 @@
 /* eslint-disable prettier/prettier */
-import { Table, Button, Space, Tag, Switch, Tooltip, Popconfirm } from 'antd'
+import { Table, Button, Space, Tag, Switch, Tooltip, Popconfirm, Image } from 'antd'
 import {
   EditOutlined, DeleteOutlined, EyeOutlined,
-  RestOutlined, CloseCircleOutlined, FilePdfOutlined,
+  RestOutlined, CloseCircleOutlined, FilePdfOutlined, PictureOutlined,
 } from '@ant-design/icons'
 
 const BookTable = ({
@@ -18,6 +18,31 @@ const BookTable = ({
       render: (_, __, i) => (pagination.current - 1) * pagination.pageSize + i + 1,
     },
     {
+      title: 'Cover',
+      key: 'cover',
+      width: 70,
+      align: 'center',
+      render: (_, record) =>
+        record.coverImage ? (
+          <Image
+            src={record.coverImage}
+            width={42}
+            height={56}
+            style={{ objectFit: 'cover', borderRadius: 4, border: '1px solid #f0f0f0' }}
+            preview={{ mask: <EyeOutlined style={{ fontSize: 12 }} /> }}
+            fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+          />
+        ) : (
+          <div style={{
+            width: 42, height: 56, borderRadius: 4,
+            background: '#f5f5f5', border: '1px dashed #d9d9d9',
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+          }}>
+            <PictureOutlined style={{ color: '#d9d9d9', fontSize: 16 }} />
+          </div>
+        ),
+    },
+    {
       title: 'Book Info',
       key: 'bookInfo',
       render: (_, record) => (
@@ -27,7 +52,7 @@ const BookTable = ({
             {record.classRef?.className} &nbsp;|&nbsp; {record.subjectRef?.subjectName}
           </div>
           {record.summary && (
-            <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }} className="ellipsis">
+            <div style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>
               {record.summary.length > 80 ? record.summary.substring(0, 80) + '...' : record.summary}
             </div>
           )}

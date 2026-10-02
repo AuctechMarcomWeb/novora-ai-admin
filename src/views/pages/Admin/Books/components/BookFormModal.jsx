@@ -3,17 +3,163 @@ import { useState } from 'react'
 import {
   Modal, Form, Input, Select, Button, Upload, Progress,
   Tag, Space, Tooltip, Table, InputNumber,
-  Row, Col, Typography,
+  Row, Col, Typography, Image,
 } from 'antd'
 import {
   RobotOutlined, DeleteOutlined, PlusOutlined,
   FilePdfOutlined, CheckCircleFilled, LoadingOutlined,
-  InfoCircleOutlined,
+  InfoCircleOutlined, PictureOutlined, UploadOutlined,
+  LinkOutlined, EyeOutlined,
 } from '@ant-design/icons'
 import { booksService } from '../../../../../services/books.service'
 import { message } from 'antd'
+import axios from 'axios'
+import Cookies from 'js-cookie'
 
 const { Text } = Typography
+
+// ─── Cover Image Uploader ─────────────────────────────────────────────────────
+const CoverImageInput = ({ value, onChange, disabled }) => {
+  const [mode, setMode]         = useState(value ? 'url' : 'upload') // 'upload' | 'url'
+  const [uploading, setUploading] = useState(false)
+  const [uploadPct, setUploadPct] = useState(0)
+
+  const handleImageUpload = async ({ file }) => {
+    const raw = file.originFileObj || file
+    if (!raw.type.startsWith('image/')) { message.error('Only image files allowed'); return }
+    setUploading(true)
+    setUploadPct(0)
+    try {
+      const BASE  = import.meta.env.VITE_API_BASE_URL
+      const token = Cookies.get('NovoraAiChat')
+      const fd    = new FormData()
+      fd.append('file', raw)
+      const res = await axios.post(`${BASE}upload/uploadImage`, fd, {
+        headers: { Authorization: token, 'Content-Type': 'multipart/form-data' },
+        onUploadProgress: (e) => e.total && setUploadPct(Math.round(e.loaded / e.total * 100)),
+      })
+      onChange(res.data.data.url)
+      message.success('Cover image uploaded!')
+    } catch (err) {
+      message.error(err?.response?.data?.message || 'Image upload failed')
+    } finally {
+      setUploading(false)
+    }
+  }
+
+  if (disabled) {
+    return value ? (
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <Image src={value} width={48} height={64} style={{ objectFit: 'cover', borderRadius: 4 }} />
+        <Text style={{ fontSize: 12, color: '#6b7280', wordBreak: 'break-all' }}>{value}</Text>
+      </div>
+    ) : <Text type="secondary">No cover image</Text>
+  }
+
+  return (
+    <div>
+      {/* Mode toggle */}
+      <Space style={{ marginBottom: 8 }}>
+        <Button
+          size="small"
+          type={mode === 'upload' ? 'primary' : 'default'}
+          icon={<UploadOutlined />}
+          onClick={() => setMode('upload')}
+        >
+          Upload Image
+        </Button>
+        <Button
+          size="small"
+          type={mode === 'url' ? 'primary' : 'default'}
+          icon={<LinkOutlined />}
+          onClick={() => setMode('url')}
+        >
+          Paste URL
+        </Button>
+      </Space>
+
+      {/* Upload mode */}
+      {mode === 'upload' && (
+        <div>
+          {uploading ? (
+            <div style={{
+              border: '1px solid #bae0ff', borderRadius: 8,
+              padding: '10px 14px', background: '#f0f8ff',
+            }}>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 6 }}>
+                <LoadingOutlined style={{ color: '#1890ff' }} />
+                <Text style={{ fontSize: 12 }}>Uploading... {uploadPct}%</Text>
+              </div>
+              <Progress percent={uploadPct} showInfo={false} strokeColor="#1890ff" strokeWidth={4} />
+            </div>
+          ) : value ? (
+            <div style={{
+              display: 'flex', alignItems: 'center', gap: 10,
+              border: '1px solid #b7eb8f', borderRadius: 8, padding: '8px 12px',
+              background: '#f6ffed',
+            }}>
+              <Image
+                src={value} width={40} height={52}
+                style={{ objectFit: 'cover', borderRadius: 4, flexShrink: 0 }}
+                preview={{ mask: <EyeOutlined /> }}
+              />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: 11, color: '#52c41a', marginBottom: 2 }}>
+                  <CheckCircleFilled style={{ marginRight: 4 }} />
+                  Image uploaded
+                </div>
+                <div style={{ fontSize: 11, color: '#6b7280', wordBreak: 'break-all', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {value}
+                </div>
+              </div>
+              <Button size="small" danger type="text" onClick={() => onChange('')}>Remove</Button>
+            </div>
+          ) : (
+            <Upload
+              accept="image/*" maxCount={1} showUploadList={false}
+              customRequest={() => {}} beforeUpload={() => false}
+              onChange={handleImageUpload}
+            >
+              <div style={{
+                border: '1.5px dashed #d1d5db', borderRadius: 8, padding: '10px 14px',
+                textAlign: 'center', cursor: 'pointer', background: '#fafafa',
+              }}
+                onMouseEnter={(e) => e.currentTarget.style.borderColor = '#1890ff'}
+                onMouseLeave={(e) => e.currentTarget.style.borderColor = '#d1d5db'}
+              >
+                <PictureOutlined style={{ fontSize: 20, color: '#9ca3af', marginBottom: 4 }} />
+                <div style={{ fontSize: 12, color: '#6b7280' }}>
+                  Click to upload cover image
+                </div>
+                <div style={{ fontSize: 11, color: '#9ca3af' }}>JPG, PNG, WEBP</div>
+              </div>
+            </Upload>
+          )}
+        </div>
+      )}
+
+      {/* URL mode */}
+      {mode === 'url' && (
+        <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+          <Input
+            value={value}
+            placeholder="https://example.com/cover.jpg"
+            onChange={(e) => onChange(e.target.value)}
+            prefix={<LinkOutlined style={{ color: '#9ca3af' }} />}
+            style={{ flex: 1 }}
+          />
+          {value && (
+            <Image
+              src={value} width={36} height={48}
+              style={{ objectFit: 'cover', borderRadius: 4, flexShrink: 0 }}
+              fallback="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg=="
+            />
+          )}
+        </div>
+      )}
+    </div>
+  )
+}
 
 // ─── Step Indicator ───────────────────────────────────────────────────────────
 const StepBadge = ({ num, label, status }) => {
@@ -464,8 +610,7 @@ const BookFormModal = ({ open, mode, loading, form, classes, subjects, onOk, onC
                 }
                 name="coverImage"
               >
-                <Input
-                  placeholder="https://..."
+                <CoverImageInput
                   disabled={isView || fieldsLocked || (isCreate && uploadState === 'idle')}
                 />
               </Form.Item>
